@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080b14">
+<title>GitHub File Manager</title>
+<style>
+:root{--bg:#080b14;--panel:#101625;--panel2:#151d2f;--text:#f4f7ff;--muted:#8e9ab2;--line:#263149;--accent:#6d5dfc;--accent2:#00c2ff;--danger:#ff5577;--ok:#24d18b;--shadow:0 18px 60px rgba(0,0,0,.28);--radius:20px}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:radial-gradient(circle at 15% 0,#172044 0,transparent 35%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input,textarea,select{font:inherit}button{cursor:pointer}.app{min-height:100vh;display:flex}
+.sidebar{width:250px;padding:22px 16px;border-right:1px solid var(--line);background:rgba(8,11,20,.75);backdrop-filter:blur(18px);position:fixed;inset:0 auto 0 0;z-index:20}
+.brand{display:flex;align-items:center;gap:12px;font-weight:800;font-size:18px;margin:5px 8px 25px}.brandIcon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 10px 30px rgba(109,93,252,.3)}
+.nav{display:grid;gap:8px}.nav button{border:0;background:transparent;color:var(--muted);padding:13px 14px;border-radius:13px;text-align:left}.nav button.active,.nav button:hover{background:var(--panel2);color:var(--text)}
+.main{width:100%;margin-left:250px;padding:24px;max-width:1600px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:22px}.mobileBrand{display:none;align-items:center;gap:9px;font-weight:800}
+.status{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}.dot{width:9px;height:9px;border-radius:50%;background:var(--danger)}.dot.ok{background:var(--ok);box-shadow:0 0 12px var(--ok)}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:11px 15px;border-radius:13px;transition:.18s}.btn:hover{transform:translateY(-1px);border-color:#3a496b}.btn.primary{border:0;background:linear-gradient(135deg,var(--accent),#8b7cff);box-shadow:0 10px 28px rgba(109,93,252,.24)}.btn.danger{color:#ff91a6;border-color:#5b2938}.btn.small{padding:8px 11px;font-size:13px}
+.hero{padding:26px;border:1px solid var(--line);background:linear-gradient(135deg,rgba(109,93,252,.16),rgba(0,194,255,.06)),var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px}.hero h1{margin:0 0 7px;font-size:clamp(24px,4vw,38px)}.hero p{margin:0;color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.card{background:rgba(16,22,37,.9);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}.card h2{font-size:17px;margin:0 0 16px}
+.row{display:flex;gap:10px;align-items:center}.row.wrap{flex-wrap:wrap}.input{width:100%;background:#0b1020;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px 13px;outline:none}.input:focus{border-color:var(--accent)}
+.tokenBox{display:grid;grid-template-columns:1fr auto;gap:9px}.help{font-size:12px;color:var(--muted);line-height:1.55;margin-top:10px}.user{display:flex;align-items:center;gap:12px}.avatar{width:46px;height:46px;border-radius:50%;object-fit:cover;border:1px solid var(--line)}
+.repoToolbar{display:grid;grid-template-columns:1fr 170px auto;gap:10px;margin-bottom:14px}.repoList,.fileList{display:grid;gap:9px;max-height:540px;overflow:auto;padding-right:3px}.repo,.file{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px;border:1px solid var(--line);border-radius:14px;background:#0c1220}.repo:hover,.file:hover{border-color:#3a496b}
+.itemMain{min-width:0}.itemTitle{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.itemSub{font-size:12px;color:var(--muted);margin-top:4px}.fileActions{display:flex;gap:8px;flex-wrap:wrap}
+.breadcrumb{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:10px 0 15px;color:var(--muted);font-size:13px}.breadcrumb button{border:0;background:none;color:#b9b3ff;padding:0}.empty{padding:30px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px}.hidden{display:none!important}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(5px);display:none;place-items:center;padding:16px;z-index:100}.modal{width:min(720px,100%);max-height:90vh;overflow:auto;background:#0d1423;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:20px}.modalHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}.modalHead h3{margin:0}.close{width:38px;height:38px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:11px}
+textarea.editor{min-height:360px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.55}.drop{border:1.5px dashed #405078;border-radius:16px;padding:28px;text-align:center;color:var(--muted);margin-bottom:14px}.fileInput{display:none}.selected{display:grid;gap:7px;margin:12px 0}.selected div{padding:9px 11px;background:#0a101d;border:1px solid var(--line);border-radius:10px;font-size:13px}
+.toastWrap{position:fixed;right:16px;bottom:16px;z-index:200;display:grid;gap:8px;width:min(380px,calc(100vw - 32px))}.toast{padding:13px 15px;border-radius:13px;border:1px solid var(--line);background:#111a2b;box-shadow:var(--shadow);font-size:13px}.toast.ok{border-color:#235b49}.toast.err{border-color:#633044}
+.spinner{width:16px;height:16px;border:2px solid #59647d;border-top-color:white;border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:-3px}@keyframes spin{to{transform:rotate(360deg)}}
+.section{display:none}.section.active{display:block}.mobileNav{display:none}
+@media(max-width:900px){.sidebar{display:none}.main{margin-left:0;padding:15px 15px 88px}.mobileBrand{display:flex}.topbar{margin-bottom:15px}.status{display:none}.grid{grid-template-columns:1fr}.mobileNav{position:fixed;display:grid;grid-template-columns:repeat(3,1fr);left:10px;right:10px;bottom:10px;background:rgba(15,21,35,.94);border:1px solid var(--line);border-radius:18px;padding:6px;z-index:50;backdrop-filter:blur(18px)}.mobileNav button{border:0;background:transparent;color:var(--muted);padding:9px 4px;border-radius:12px;font-size:12px}.mobileNav button.active{background:var(--panel2);color:var(--text)}}
+@media(max-width:620px){.hero{padding:20px}.card{padding:16px}.repoToolbar{grid-template-columns:1fr 1fr}.repoToolbar .wide{grid-column:1/-1}.tokenBox{grid-template-columns:1fr}.topbar .btn{padding:9px 11px}.fileActions{width:100%}}
+.oauthBox{display:grid;gap:8px}.oauth{width:100%;background:#fff;color:#111;border:1px solid #fff;font-weight:800}.oauth:hover{background:#e9eef5}.oauthHint{font-size:12px;color:var(--muted)}.divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:14px 0}.divider:before,.divider:after{content:"";height:1px;background:var(--line);flex:1}.divider span{white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+<div class="brand"><div class="brandIcon">⌘</div>GitHub Manager</div>
+<div class="nav">
+<button class="active" data-tab="home">⌂ &nbsp; Dashboard</button>
+<button data-tab="files">▣ &nbsp; Repository Files</button>
+<button data-tab="settings">⚙ &nbsp; Settings</button>
+</div>
+</aside>
+
+<main class="main">
+<header class="topbar">
+<div class="mobileBrand"><div class="brandIcon" style="width:36px;height:36px">⌘</div>GitHub Manager</div>
+<div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Not connected</span></div>
+<div class="row"><button class="btn small" id="refreshBtn">↻ Refresh</button><button class="btn small danger hidden" id="disconnectBtn">Disconnect</button></div>
+</header>
+
+<section class="section active" id="home">
+<div class="hero"><h1>Manage GitHub from anywhere.</h1><p>Connect your GitHub token, browse repositories, and upload or update files directly from your phone or tablet.</p></div>
+
+<div class="grid">
+<div class="card">
+<h2>🔐 GitHub Connection</h2>
+<div id="connectedUser" class="hidden"></div>
+<div id="connectBox">
+<div class="oauthBox"><button class="btn oauth" id="oauthConnectBtn">◉ &nbsp; Connect with GitHub</button><div class="oauthHint">OAuth Device Flow — no personal access token needs to be pasted.</div></div><div class="divider"><span>or connect with a token</span></div><div class="tokenBox"><input class="input" id="tokenInput" type="password" placeholder="Paste GitHub Fine-grained token"><button class="btn primary" id="connectBtn">Connect</button></div>
+<div class="help">OAuth is recommended. To use it, enter your GitHub OAuth App <b>Client ID</b> in Settings and enable <b>Device Flow</b> for that OAuth App. The OAuth access token is kept in this browser session only.<br><br>Token fallback: create a GitHub fine-grained personal access token with <b>Contents: Read and write</b>.</div>
+</div>
+</div>
+
+<div class="card"><h2>📊 Account</h2><div id="accountStats" class="empty">Connect GitHub to load account details.</div></div>
+</div>
+
+<div class="card" style="margin-top:18px">
+<h2>📦 Repositories</h2>
+<div class="repoToolbar">
+<input class="input wide" id="repoSearch" placeholder="Search repositories..." disabled>
+<select class="input" id="repoType" disabled><option value="all">All</option><option value="owner">Owner</option><option value="private">Private</option><option value="public">Public</option></select>
+<button class="btn" id="loadReposBtn" disabled>Load</button>
+</div>
+<div id="repoList" class="repoList"><div class="empty">No repositories loaded.</div></div>
+</div>
+</section>
+
+<section class="section" id="files">
+<div class="card">
+<div class="row wrap" style="justify-content:space-between">
+<div><h2 id="repoTitle" style="margin-bottom:4px">Repository Files</h2><div class="itemSub" id="repoMeta">Select a repository from Dashboard.</div></div>
+<div class="fileActions"><select class="input" id="branchSelect" style="min-width:150px"></select><button class="btn primary" id="uploadBtn" disabled>＋ Upload</button><button class="btn" id="refreshFilesBtn" disabled>↻</button></div>
+</div>
+<div class="breadcrumb" id="breadcrumb"></div>
+<div id="fileList" class="fileList"><div class="empty">Select a repository to browse files.</div></div>
+</div>
+</section>
+
+<section class="section" id="settings">
+<div class="card">
+<h2>⚙ Settings & Security</h2>
+<p class="help">The token is kept only in this browser's localStorage. For shared/public devices, disconnect when finished.</p>
+<label class="help" for="oauthClientId">GitHub OAuth App Client ID</label><div class="row wrap" style="margin-top:8px"><input class="input" id="oauthClientId" placeholder="Example: Iv1.xxxxxxxxxxxxxxxx" style="min-width:260px"><button class="btn" id="saveOAuthBtn">Save Client ID</button></div><div class="row wrap" style="margin-top:15px"><button class="btn danger" id="clearTokenBtn">Clear Saved Token</button><button class="btn" id="githubBtn">Open GitHub</button></div>
+<div class="help" style="margin-top:20px">Recommended: Fine-grained token → select only required repositories → Repository permissions → <b>Contents: Read and write</b>.<br><br>Never paste a token into public source code or commit it to a repository.</div>
+</div>
+</section>
+</main>
+</div>
+
+<nav class="mobileNav"><button class="active" data-tab="home">⌂<br>Home</button><button data-tab="files">▣<br>Files</button><button data-tab="settings">⚙<br>Settings</button></nav>
+
+<div class="overlay" id="uploadModal"><div class="modal">
+<div class="modalHead"><h3>Upload files</h3><button class="close" data-close="uploadModal">×</button></div>
+<div class="drop"><div style="font-size:30px">☁️</div><div>Select one or more files</div><button class="btn primary" style="margin-top:12px" id="chooseFilesBtn">Choose Files</button><input class="fileInput" id="fileInput" type="file" multiple></div>
+<div id="selectedFiles" class="selected"></div>
+<input class="input" id="commitInput" placeholder="Commit message" value="Upload files">
+<div class="row" style="justify-content:flex-end;margin-top:15px"><button class="btn" data-close="uploadModal">Cancel</button><button class="btn primary" id="doUploadBtn">Upload</button></div>
+</div></div>
+
+<div class="overlay" id="editorModal"><div class="modal">
+<div class="modalHead"><h3 id="editorTitle">Edit file</h3><button class="close" data-close="editorModal">×</button></div>
+<textarea class="input editor" id="editorText"></textarea>
+<input class="input" id="editorCommit" style="margin-top:10px" value="Update file">
+<div class="row" style="justify-content:flex-end;margin-top:15px"><button class="btn" data-close="editorModal">Cancel</button><button class="btn primary" id="saveEditBtn">Save & Commit</button></div>
+</div></div>
+
+<div class="overlay" id="confirmModal"><div class="modal" style="max-width:440px">
+<div class="modalHead"><h3>Delete file?</h3><button class="close" data-close="confirmModal">×</button></div>
+<p class="help" id="deleteText"></p>
+<input class="input" id="deleteCommit" value="Delete file">
+<div class="row" style="justify-content:flex-end;margin-top:15px"><button class="btn" data-close="confirmModal">Cancel</button><button class="btn danger" id="confirmDeleteBtn">Delete</button></div>
+</div></div>
+
+<div class="overlay" id="oauthModal"><div class="modal" style="max-width:520px;text-align:center"><div class="modalHead"><h3>Connect with GitHub</h3><button class="close" data-close="oauthModal">×</button></div><div id="oauthStatus" class="help" style="font-size:15px"></div><div id="oauthCode" style="font-size:30px;font-weight:800;letter-spacing:3px;margin:18px 0"></div><button class="btn primary" id="openDeviceBtn">Open GitHub Authorization</button><div class="help" style="margin-top:14px">Enter the code above on GitHub. This window will check automatically until you approve or the code expires.</div></div></div><div class="toastWrap" id="toastWrap"></div>
+
+<script>
+"use strict";
+const API="https://api.github.com";
+const state={deviceVerificationUri:"https://github.com/login/device",token:sessionStorage.getItem("ghfm_oauth_token")||localStorage.getItem("ghfm_token")||"",oauthClientId:localStorage.getItem("ghfm_oauth_client_id")||"",user:null,repos:[],repo:null,branches:[],branch:"",path:"",files:[],editing:null,deleting:null,selectedFiles:[]};
+const $=id=>document.getElementById(id);
+
+function toast(message,type="ok"){const el=document.createElement("div");el.className="toast "+type;el.textContent=message;$("toastWrap").appendChild(el);setTimeout(()=>el.remove(),4200)}
+function setLoading(button,on,text){if(!button)return;if(on){button.dataset.old=button.innerHTML;button.disabled=true;button.innerHTML='<span class="spinner"></span> '+(text||"Working...")}else{button.disabled=false;button.innerHTML=button.dataset.old||button.innerHTML}}
+function openModal(id){$(id).style.display="grid"}
+function closeModal(id){$(id).style.display="none"}
+function escapeHTML(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+
+async function api(path,options={}){
+if(!state.token)throw new Error("Not connected to GitHub.");
+const headers={"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(options.headers||{})};
+headers.Authorization="Bearer "+state.token;
+const response=await fetch(API+path,{...options,headers});
+let data=null;try{data=await response.json()}catch{}
+if(!response.ok){if(response.status===401){disconnect(false);throw new Error("GitHub token is invalid or expired.")}throw new Error(data?.message||"GitHub API error "+response.status)}
+return data
+}
+
+function encodeBase64(text){const bytes=new TextEncoder().encode(text);let binary="";for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary)}
+function decodeBase64(value){const binary=atob(value.replace(/\n/g,""));const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes)}
+function fileToBase64(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result.split(",")[1]);r.onerror=reject;r.readAsDataURL(file)})}
+
+
+async function connectWithGitHubOAuth(){
+ const clientId=state.oauthClientId||$("oauthClientId").value.trim();
+ if(!clientId){switchTab("settings");toast("Add your GitHub OAuth App Client ID in Settings first.","err");$("oauthClientId").focus();return}
+ localStorage.setItem("ghfm_oauth_client_id",clientId);state.oauthClientId=clientId;
+ const button=$("oauthConnectBtn");setLoading(button,true,"Starting OAuth...");
+ try{
+  const r=await fetch("https://github.com/login/device/code",{method:"POST",headers:{"Accept":"application/json","Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({client_id:clientId,scope:"repo read:user user:email"})});
+  const d=await r.json();
+  if(!r.ok||!d.device_code)throw new Error(d.error_description||d.message||"Could not start GitHub OAuth Device Flow.");
+  $("oauthStatus").textContent="Open GitHub and enter this verification code:";$("oauthCode").textContent=d.user_code;openModal("oauthModal");
+  state.deviceVerificationUri=d.verification_uri||"https://github.com/login/device";
+  let interval=Math.max(Number(d.interval)||5,5)*1000,expires=Date.now()+Number(d.expires_in||900)*1000;
+  while(Date.now()<expires){await new Promise(r=>setTimeout(r,interval));
+   const tr=await fetch("https://github.com/login/oauth/access_token",{method:"POST",headers:{"Accept":"application/json","Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({client_id:clientId,device_code:d.device_code,grant_type:"urn:ietf:params:oauth:grant-type:device_code"})});
+   const t=await tr.json();
+   if(t.access_token){state.token=t.access_token;sessionStorage.setItem("ghfm_oauth_token",t.access_token);closeModal("oauthModal");state.user=await api("/user");setConnectedUI();toast("GitHub OAuth connected successfully.");await loadRepos();return}
+   if(t.error==="slow_down")interval+=5000;else if(t.error==="access_denied")throw new Error("GitHub authorization was cancelled.");else if(t.error==="expired_token")throw new Error("The OAuth code expired. Please try again.");else if(t.error!=="authorization_pending")throw new Error(t.error_description||t.error||"OAuth authorization failed.");
+  }
+  throw new Error("The OAuth code expired. Please try again.");
+ }catch(e){closeModal("oauthModal");toast(e.message,"err")}finally{setLoading(button,false)}
+}
+
+function setConnectedUI(){
+const connected=!!state.user;
+$("statusDot").className="dot "+(connected?"ok":"");
+$("statusText").textContent=connected?"Connected as "+state.user.login:"Not connected";
+$("disconnectBtn").classList.toggle("hidden",!connected);
+$("connectBox").classList.toggle("hidden",connected);
+$("connectedUser").classList.toggle("hidden",!connected);
+$("repoSearch").disabled=!connected;$("repoType").disabled=!connected;$("loadReposBtn").disabled=!connected;
+if(connected){
+$("connectedUser").innerHTML='<div class="user"><img class="avatar" src="'+escapeHTML(state.user.avatar_url)+'"><div><b>'+escapeHTML(state.user.name||state.user.login)+'</b><div class="itemSub">@'+escapeHTML(state.user.login)+'</div></div></div>';
+$("accountStats").innerHTML='<div class="row wrap"><span>👥 '+(state.user.followers??0)+' followers</span><span>📦 '+(state.user.public_repos??0)+' public repos</span></div>';
+}else{$("connectedUser").innerHTML="";$("accountStats").innerHTML='<div class="empty">Connect GitHub to load account details.</div>'}
+}
+
+async function connect(){
+const token=$("tokenInput").value.trim();
+if(!token)return toast("Paste your GitHub token first.","err");
+const button=$("connectBtn");setLoading(button,true,"Connecting...");
+try{state.token=token;state.user=await api("/user");localStorage.setItem("ghfm_token",token);$("tokenInput").value="";setConnectedUI();toast("GitHub connected successfully.");await loadRepos()}
+catch(error){state.token="";state.user=null;sessionStorage.removeItem("ghfm_oauth_token");setConnectedUI();toast(error.message,"err")}
+finally{setLoading(button,false)}
+}
+
+function disconnect(showToast=true){
+state.token="";state.user=null;sessionStorage.removeItem("ghfm_oauth_token");state.repos=[];state.repo=null;state.files=[];state.branch="";state.path="";
+localStorage.removeItem("ghfm_token");setConnectedUI();renderRepos();renderFiles();if(showToast)toast("Disconnected from GitHub.")
+}
+
+async function loadRepos(){
+if(!state.token)return;
+const button=$("loadReposBtn");setLoading(button,true,"Loading...");
+try{
+const type=$("repoType").value;let query="?per_page=100&sort=updated&direction=desc";
+if(type==="private")query+="&type=private";else if(type==="public")query+="&type=public";else if(type==="owner")query+="&type=owner";
+state.repos=await api("/user/repos"+query);renderRepos()
+}catch(error){toast(error.message,"err")}finally{setLoading(button,false)}
+}
+
+function filteredRepos(){const q=$("repoSearch").value.trim().toLowerCase();return state.repos.filter(r=>!q||r.name.toLowerCase().includes(q)||r.full_name.toLowerCase().includes(q))}
+function renderRepos(){
+const list=$("repoList"),repos=filteredRepos();
+if(!repos.length){list.innerHTML='<div class="empty">'+(state.repos.length?"No matching repositories.":"No repositories loaded.")+"</div>";return}
+list.innerHTML=repos.map(r=>'<div class="repo"><div class="itemMain"><div class="itemTitle">📦 '+escapeHTML(r.name)+'</div><div class="itemSub">'+escapeHTML(r.full_name)+" · "+(r.private?"Private":"Public")+" · ★ "+(r.stargazers_count||0)+'</div></div><button class="btn small" onclick="openRepo(\''+encodeURIComponent(r.full_name)+"')\">Open →</button></div>").join("")
+}
+
+async function openRepo(encoded){
+const fullName=decodeURIComponent(encoded),repo=state.repos.find(r=>r.full_name===fullName);if(!repo)return;
+state.repo=repo;state.path="";state.branch=repo.default_branch||"main";
+$("repoTitle").textContent=repo.name;$("repoMeta").textContent=repo.full_name+" · "+(repo.private?"Private":"Public");switchTab("files");
+try{await loadBranches();await loadFiles()}catch(error){toast(error.message,"err")}
+}
+
+async function loadBranches(){
+const owner=state.repo.owner.login,name=state.repo.name;
+const branches=await api("/repos/"+owner+"/"+name+"/branches?per_page=100");state.branches=branches;
+const select=$("branchSelect");select.innerHTML=branches.map(b=>'<option value="'+escapeHTML(b.name)+'">'+escapeHTML(b.name)+"</option>").join("");
+if(!branches.some(b=>b.name===state.branch)&&branches[0])state.branch=branches[0].name;select.value=state.branch
+}
+
+async function loadFiles(){
+if(!state.repo)return;
+$("refreshFilesBtn").disabled=true;$("uploadBtn").disabled=true;
+try{
+const owner=state.repo.owner.login,name=state.repo.name,path=state.path?"/"+state.path:"";
+const data=await api("/repos/"+owner+"/"+name+"/contents"+path+"?ref="+encodeURIComponent(state.branch));
+state.files=Array.isArray(data)?data:[data];renderFiles()
+}catch(error){$("fileList").innerHTML='<div class="empty">'+escapeHTML(error.message)+"</div>";toast(error.message,"err")}
+finally{$("uploadBtn").disabled=false;$("refreshFilesBtn").disabled=false}
+}
+
+function renderFiles(){
+const breadcrumb=$("breadcrumb"),parts=state.path?state.path.split("/").filter(Boolean):[];
+breadcrumb.innerHTML='<button onclick="goPath(\'\')">root</button>'+parts.map((p,i)=>'<span>/</span><button onclick="goPath(\''+encodeURIComponent(parts.slice(0,i+1).join("/"))+"')\">"+escapeHTML(p)+"</button>").join("");
+const files=[...state.files].sort((a,b)=>(a.type==="dir"?0:1)-(b.type==="dir"?0:1)||a.name.localeCompare(b.name));
+if(!files.length){$("fileList").innerHTML='<div class="empty">This folder is empty.</div>';return}
+$("fileList").innerHTML=files.map(f=>{
+if(f.type==="dir")return '<div class="file"><div class="itemMain"><div class="itemTitle">📁 '+escapeHTML(f.name)+'</div><div class="itemSub">Folder</div></div><button class="btn small" onclick="openFolder(\''+encodeURIComponent(f.name)+"')\">Open →</button></div>";
+const editable=/\.(txt|md|html?|css|js|json|xml|csv|yml|yaml|py|java|c|cpp|h|php|sql|sh|ts|tsx|jsx)$/i.test(f.name);
+return '<div class="file"><div class="itemMain"><div class="itemTitle">📄 '+escapeHTML(f.name)+'</div><div class="itemSub">'+(f.size?formatBytes(f.size):"File")+'</div></div><div class="fileActions">'+(editable?'<button class="btn small" onclick="editFile(\''+encodeURIComponent(f.path)+"')\">Edit</button>":"")+'<button class="btn small danger" onclick="askDelete(\''+encodeURIComponent(f.path)+"','"+encodeURIComponent(f.name)+"')\">Delete</button></div></div>"
+}).join("")
+}
+
+function formatBytes(n){if(!n)return"0 B";const u=["B","KB","MB","GB"],i=Math.min(Math.floor(Math.log(n)/Math.log(1024)),u.length-1);return(n/Math.pow(1024,i)).toFixed(i?1:0)+" "+u[i]}
+function openFolder(encoded){const folder=decodeURIComponent(encoded);state.path=state.path?state.path+"/"+folder:folder;loadFiles()}
+function goPath(encoded){state.path=decodeURIComponent(encoded);loadFiles()}
+
+async function editFile(encoded){
+const path=decodeURIComponent(encoded);
+try{
+const owner=state.repo.owner.login,name=state.repo.name,data=await api("/repos/"+owner+"/"+name+"/contents/"+path+"?ref="+encodeURIComponent(state.branch));
+$("editorTitle").textContent="Edit "+data.name;$("editorText").value=decodeBase64(data.content);$("editorCommit").value="Update "+data.name;state.editing=data;openModal("editorModal")
+}catch(error){toast(error.message,"err")}
+}
+
+async function saveEdit(){
+if(!state.editing)return;
+const button=$("saveEditBtn");setLoading(button,true,"Saving...");
+try{
+const owner=state.repo.owner.login,name=state.repo.name;
+const body={message:$("editorCommit").value.trim()||"Update file",content:encodeBase64($("editorText").value),sha:state.editing.sha,branch:state.branch};
+await api("/repos/"+owner+"/"+name+"/contents/"+state.editing.path,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+closeModal("editorModal");toast("File updated and committed.");await loadFiles()
+}catch(error){toast(error.message,"err")}finally{setLoading(button,false)}
+}
+
+function askDelete(path,name){
+state.deleting=decodeURIComponent(path);$("deleteText").textContent='This will delete "'+decodeURIComponent(name)+'" from branch '+state.branch+". A Git commit will be created.";openModal("confirmModal")
+}
+
+async function confirmDelete(){
+if(!state.deleting)return;
+const button=$("confirmDeleteBtn");setLoading(button,true,"Deleting...");
+try{
+const owner=state.repo.owner.login,name=state.repo.name;
+const data=await api("/repos/"+owner+"/"+name+"/contents/"+state.deleting+"?ref="+encodeURIComponent(state.branch));
+const body={message:$("deleteCommit").value.trim()||"Delete file",sha:data.sha,branch:state.branch};
+await api("/repos/"+owner+"/"+name+"/contents/"+state.deleting,{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+closeModal("confirmModal");toast("File deleted.");state.deleting=null;await loadFiles()
+}catch(error){toast(error.message,"err")}finally{setLoading(button,false)}
+}
+
+function showUpload(){
+if(!state.repo)return toast("Open a repository first.","err");
+$("fileInput").value="";state.selectedFiles=[];renderSelected();openModal("uploadModal")
+}
+
+function renderSelected(){$("selectedFiles").innerHTML=state.selectedFiles.map(f=>'<div>📄 '+escapeHTML(f.name)+' <span style="float:right;color:var(--muted)">'+formatBytes(f.size)+"</span></div>").join("")}
+
+async function doUpload(){
+if(!state.selectedFiles.length)return toast("Choose at least one file.","err");
+const button=$("doUploadBtn");setLoading(button,true,"Uploading...");
+try{
+const owner=state.repo.owner.login,name=state.repo.name,message=$("commitInput").value.trim()||"Upload files";
+for(const file of state.selectedFiles){
+const path=state.path?state.path+"/"+file.name:file.name,content=await fileToBase64(file);let existing=null;
+try{existing=await api("/repos/"+owner+"/"+name+"/contents/"+path+"?ref="+encodeURIComponent(state.branch))}catch{}
+const body={message,content,branch:state.branch};if(existing?.sha)body.sha=existing.sha;
+await api("/repos/"+owner+"/"+name+"/contents/"+path,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+}
+closeModal("uploadModal");toast(state.selectedFiles.length+" file(s) uploaded successfully.");await loadFiles()
+}catch(error){toast(error.message,"err")}finally{setLoading(button,false)}
+}
+
+function switchTab(tab){
+document.querySelectorAll(".section").forEach(x=>x.classList.toggle("active",x.id===tab));
+document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x.dataset.tab===tab))
+}
+document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
+
+$("connectBtn").onclick=connect;
+$("oauthConnectBtn").onclick=connectWithGitHubOAuth;
+$("openDeviceBtn").onclick=()=>window.open(state.deviceVerificationUri,"_blank","noopener");
+$("saveOAuthBtn").onclick=()=>{state.oauthClientId=$("oauthClientId").value.trim();localStorage.setItem("ghfm_oauth_client_id",state.oauthClientId);toast("OAuth Client ID saved.")};
+$("oauthClientId").value=state.oauthClientId;
+$("disconnectBtn").onclick=()=>disconnect(true);
+$("loadReposBtn").onclick=loadRepos;
+$("refreshBtn").onclick=()=>state.user?loadRepos():toast("Connect GitHub first.","err");
+$("repoSearch").oninput=renderRepos;
+$("repoType").onchange=loadRepos;
+$("uploadBtn").onclick=showUpload;
+$("refreshFilesBtn").onclick=loadFiles;
+$("branchSelect").onchange=()=>{state.branch=$("branchSelect").value;state.path="";loadFiles()};
+$("chooseFilesBtn").onclick=()=>$("fileInput").click();
+$("fileInput").onchange=e=>{state.selectedFiles=[...e.target.files];renderSelected()};
+$("doUploadBtn").onclick=doUpload;
+$("saveEditBtn").onclick=saveEdit;
+$("confirmDeleteBtn").onclick=confirmDelete;
+$("clearTokenBtn").onclick=()=>disconnect(true);
+$("githubBtn").onclick=()=>window.open("https://github.com","_blank","noopener");
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeModal(b.dataset.close));
+window.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".overlay").forEach(x=>x.style.display="none")});
+
+async function init(){
+setConnectedUI();
+if(state.token){try{state.user=await api("/user");setConnectedUI();await loadRepos()}catch{disconnect(false)}}
+}
+init();
+</script>
+</body>
+</html>
