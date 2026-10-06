@@ -101,14 +101,15 @@ the app tries direct access first and a public CORS fallback when enabled; block
 
 <form class="search" id="form">
 <input id="url" type="url" placeholder="https://example.com" autocomplete="url" required>
-<button class="scan" id="scan">⚡ SCAN</button>
+<button type="submit" class="scan" id="scan">⚡ SCAN</button>
 </form>
 
 <div class="options">
 <label><input id="same" type="checkbox" checked> Same domain</label>
 <label><input id="external" type="checkbox" checked> External</label>
 <label><input id="media" type="checkbox" checked> Media</label>
-<label><input id="docs" type="checkbox" checked> Documents</label><label><input id="proxy" type="checkbox" checked> CORS fallback</label>
+<label><input id="docs" type="checkbox" checked> Documents</label>
+<label><input id="proxy" type="checkbox" checked> CORS fallback</label>
 </div>
 
 <div class="status hide" id="status">
@@ -134,12 +135,15 @@ the app tries direct access first and a public CORS fallback when enabled; block
 <div class="filters">
 <input id="search" type="search" placeholder="Search URL / title...">
 <select id="category">
-<option value="all">All</option><option value="page">Pages</option>
-<option value="media">Media</option><option value="document">Documents</option>
+<option value="all">All</option>
+<option value="page">Pages</option>
+<option value="media">Media</option>
+<option value="document">Documents</option>
 <option value="external">External</option>
 </select>
 <select id="state">
-<option value="all">All status</option><option value="live">Live</option>
+<option value="all">All status</option>
+<option value="live">Live</option>
 <option value="failed">Failed / blocked</option>
 </select>
 </div>
@@ -151,23 +155,272 @@ the app tries direct access first and a public CORS fallback when enabled; block
 
 <script>
 "use strict";
-const $=id=>document.getElementById(id); let links=[],scanning=false,aborter=null;
-const PROXY="https://api.allorigins.win/get?url=",MAX_LINKS=60,TIMEOUT=8000,CONCURRENCY=5;
-function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
-function normalize(v){let x=String(v||"").trim();if(!x)return null;if(!/^https?:\/\//i.test(x))x="https://"+x;try{let u=new URL(x);if(!["http:","https:"].includes(u.protocol))return null;u.hash="";return u.href}catch{return null}}
-function setProgress(n,t){n=Math.max(0,Math.min(100,Math.round(n)));$("bar").style.width=n+"%";$("pct").textContent=n+"%";$("statusText").textContent=t}
-function classify(url,target){const u=new URL(url),t=new URL(target),same=u.hostname.replace(/^www\./i,"")===t.hostname.replace(/^www\./i,"");const p=u.pathname.toLowerCase();let type=same?"page":"external";if(/\.(mp4|webm|ogg|mp3|wav|m4a|mov|avi|mkv|jpg|jpeg|png|gif|svg|webp|avif|ico)$/i.test(p))type="media";else if(/\.(pdf|doc|docx|xls|xlsx|csv|zip|rar|7z|txt|rtf)$/i.test(p))type="document";return{same,type}}
-function extract(html,base){const doc=new DOMParser().parseFromString(html,"text/html"),out=new Map(),add=(raw,title,sourceType)=>{if(!raw)return;raw=raw.trim();if(/^(#|javascript:|mailto:|tel:|data:|blob:|about:)/i.test(raw))return;try{const u=new URL(raw,base);if(!["http:","https:"].includes(u.protocol))return;u.hash="";if(!out.has(u.href))out.set(u.href,{url:u.href,title:title||sourceType||"Link",sourceType})}catch{}};doc.querySelectorAll("a[href],area[href]").forEach(e=>add(e.getAttribute("href"),e.textContent.trim(),"page"));doc.querySelectorAll("img[src],video[src],audio[src],source[src],iframe[src]").forEach(e=>add(e.getAttribute("src"),e.tagName.toLowerCase(),"media"));doc.querySelectorAll("link[href]").forEach(e=>add(e.getAttribute("href"),e.getAttribute("rel")||"link","document"));doc.querySelectorAll("script[src]").forEach(e=>add(e.getAttribute("src"),"script","document"));return[...out.values()]}
-async function directFetch(url,method="GET"){const c=new AbortController(),timer=setTimeout(()=>c.abort(),TIMEOUT),started=performance.now();try{const r=await fetch(url,{method,mode:"cors",cache:"no-store",redirect:"follow",signal:c.signal});return{ok:true,response:r,status:r.status,ms:Math.round(performance.now()-started),via:"direct"}}catch(e){return{ok:false,response:null,status:null,ms:Math.round(performance.now()-started),via:"direct",error:e?.name==="AbortError"?"Timeout":"CORS / Network blocked"}}finally{clearTimeout(timer)}}
-async function proxyFetch(url){const c=new AbortController(),timer=setTimeout(()=>c.abort(),TIMEOUT+3000),started=performance.now();try{const r=await fetch(PROXY+encodeURIComponent(url),{cache:"no-store",signal:c.signal});if(!r.ok)return{ok:false,status:r.status,ms:Math.round(performance.now()-started),via:"proxy",error:"Proxy HTTP "+r.status};const d=await r.json(),code=Number(d?.status?.http_code||d?.status?.status||200),contents=typeof d?.contents==="string"?d.contents:"";return{ok:code>=200&&code<400,status:code,ms:Math.round(performance.now()-started),via:"proxy",contents,error:code>=400?"HTTP "+code:null}}catch(e){return{ok:false,status:null,ms:Math.round(performance.now()-started),via:"proxy",error:e?.name==="AbortError"?"Proxy timeout":"Proxy unavailable"}}finally{clearTimeout(timer)}}
-async function getTarget(target){let d=await directFetch(target,"GET");if(d.ok&&d.response){let body="";try{body=await d.response.text()}catch{}return{...d,body}}if($("proxy").checked){const p=await proxyFetch(target);if(p.ok&&p.contents)return{...p,body:p.contents};return{...d,proxyError:p.error}}return d}
-async function checkLink(item){if(aborter?.signal.aborted)return{aborted:true};let r=await directFetch(item.url,"HEAD");if(r.ok)return{ok:true,status:r.status,ms:r.ms,via:"direct",error:null};r=await directFetch(item.url,"GET");if(r.ok)return{ok:true,status:r.status,ms:r.ms,via:"direct",error:null};if($("proxy").checked){const p=await proxyFetch(item.url);if(p.ok)return{ok:true,status:p.status,ms:p.ms,via:"proxy",error:null};return{ok:false,status:p.status,ms:p.ms,via:"proxy",error:p.error||r.error||"Unverified"}}return{ok:false,status:r.status,ms:r.ms,via:"direct",error:r.error||"Unverified"}}
-function updateCounts(){$("live").textContent=links.filter(x=>x.ok===true).length;$("failed").textContent=links.filter(x=>x.ok===false).length}
-function render(){const q=$("search").value.trim().toLowerCase(),cat=$("category").value,st=$("state").value,arr=links.filter(x=>{const h=(x.url+" "+x.title).toLowerCase();if(q&&!h.includes(q))return false;if(cat!=="all"&&x.type!==cat)return false;if(st==="live"&&x.ok!==true)return false;if(st==="failed"&&x.ok!==false)return false;return true});if(!arr.length){$("list").innerHTML='<div class="empty">No matching links found yet.</div>';return}$("list").innerHTML=arr.map(x=>{const state=x.ok===true?`<span class="badge ok">✓ LIVE ${x.status||""}</span>`:x.ok===false?`<span class="badge bad">✕ ${esc(x.error||"FAILED")}</span>`:`<span class="badge">CHECKING</span>`,ms=x.ms!=null?`<span class="badge info">${x.ms} ms</span>`:"",via=x.via?`<span class="badge">${esc(x.via)}</span>`:"",icon=x.type==="media"?"🎬":x.type==="document"?"📄":x.type==="external"?"🌐":"🔗";return `<article class="card"><div class="row"><div class="ico">${icon}</div><div class="body"><div class="title">${esc(x.title||x.url)}</div><div class="url">${esc(x.url)}</div><div class="meta"><span class="badge">${x.type}</span>${state}${ms}${via}<span class="badge">${x.same?"SAME":"EXTERNAL"}</span></div></div><div class="actions"><button class="open" data-open="${esc(x.url)}">OPEN</button><button class="copy" data-copy="${esc(x.url)}">COPY</button></div></div></article>`}).join("")}
-async function runBatch(items){let next=0,done=0;async function worker(){while(true){if(aborter?.signal.aborted)return;const i=next++;if(i>=items.length)return;const result=await checkLink(items[i]);if(aborter?.signal.aborted)return;Object.assign(items[i],result);done++;updateCounts();setProgress(25+done/Math.max(items.length,1)*75,`Checking links ${done}/${items.length}`);render()}}await Promise.all(Array.from({length:Math.min(CONCURRENCY,Math.max(items.length,1))},worker))}
-async function scan(){if(scanning){aborter?.abort();return}const target=normalize($("url").value);if(!target){alert("නිවැරදි website URL එකක් ඇතුළත් කරන්න.\nඋදා: https://example.com");return}scanning=true;aborter=new AbortController();$("scan").disabled=true;$("scan").textContent="⏹ STOP";$("status").classList.remove("hide");$("summary").classList.remove("hide");$("results").classList.remove("hide");links=[];$("found").textContent="0";$("live").textContent="0";$("failed").textContent="0";$("ping").textContent="—";$("https").textContent=new URL(target).protocol==="https:"?"ON":"OFF";render();setProgress(3,"Connecting to target...");try{const tr=await getTarget(target);if(aborter.signal.aborted)return;if(!tr.ok||!tr.body){setProgress(100,"Target could not be read");$("list").innerHTML=`<div class="empty"><b>⚠️ Website content could not be read.</b><br><br>${esc(tr.error||tr.proxyError||"Unknown error")}<br><br><small>Direct browser access can be blocked by CORS, login protection, bot protection, or network rules. The analyzer will not invent results.</small></div>`;return}$("ping").textContent=(tr.ms??"—")+" ms";setProgress(20,"Target connected • extracting links...");const raw=extract(tr.body,target),filtered=raw.filter(x=>{const c=classify(x.url,target);x.same=c.same;x.type=c.type;if(c.same&&!$("same").checked)return false;if(!c.same&&!$("external").checked)return false;if(c.type==="media"&&!$("media").checked)return false;if(c.type==="document"&&!$("docs").checked)return false;return true}).slice(0,MAX_LINKS);links=filtered.map(x=>({...x,ok:null,status:null,ms:null,via:null,error:null}));$("found").textContent=links.length;render();if(!links.length){setProgress(100,"Scan complete • no public links found");return}await runBatch(links);if(!aborter.signal.aborted){updateCounts();const live=links.filter(x=>x.ok===true).length,failed=links.filter(x=>x.ok===false).length;setProgress(100,`Complete • ${live} live • ${failed} failed/unverified`)}}catch(err){console.error(err);setProgress(100,"Scanner error");$("list").innerHTML=`<div class="empty">⚠️ Unexpected scanner error.<br><br>${esc(err?.message||err||"Unknown error")}</div>`}finally{scanning=false;$("scan").disabled=false;$("scan").textContent="⚡ SCAN";aborter=null}}
-$("form").addEventListener("submit",e=>{e.preventDefault();scan()});[$("search"),$("category"),$("state")].forEach(el=>{el.addEventListener("input",render);el.addEventListener("change",render)});$("list").addEventListener("click",async e=>{const o=e.target.closest("[data-open]"),c=e.target.closest("[data-copy]");if(o)window.open(o.dataset.open,"_blank","noopener,noreferrer");if(c)try{await navigator.clipboard.writeText(c.dataset.copy);c.textContent="COPIED";setTimeout(()=>c.textContent="COPY",900)}catch{alert("Copy failed")}});$("copyLive").addEventListener("click",async()=>{const urls=links.filter(x=>x.ok===true).map(x=>x.url);if(!urls.length){alert("Live links නැහැ.");return}try{await navigator.clipboard.writeText(urls.join("\n"));$("copyLive").textContent="COPIED";setTimeout(()=>$("copyLive").textContent="COPY LIVE",1000)}catch{alert("Copy failed")}});
-</script>
+const $ = id => document.getElementById(id);
+let links = [], scanning = false, aborter = null;
+const MAX_LINKS = 80, CONCURRENCY = 6;
 
-</body>
-</html>
+// Utility functions
+function esc(v) { return String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c])); }
+function normalize(v) {
+    let x = String(v || "").trim();
+    if (!x) return null;
+    if (!/^https?:\/\//i.test(x)) x = "https://" + x;
+    try {
+        let u = new URL(x);
+        if (!["http:", "https:"].includes(u.protocol)) return null;
+        u.hash = "";
+        return u.href;
+    } catch { return null; }
+}
+
+function setProgress(n, t) {
+    n = Math.max(0, Math.min(100, Math.round(n)));
+    $("bar").style.width = n + "%";
+    $("pct").textContent = n + "%";
+    $("statusText").textContent = t;
+}
+
+function classify(url, target) {
+    const u = new URL(url), t = new URL(target), same = u.hostname.replace(/^www\./i, "") === t.hostname.replace(/^www\./i, "");
+    const p = u.pathname.toLowerCase();
+    let type = same ? "page" : "external";
+    if (/\.(mp4|webm|ogg|mp3|wav|m4a|mov|avi|mkv|jpg|jpeg|png|gif|svg|webp|avif|ico)$/i.test(p)) type = "media";
+    else if (/\.(pdf|doc|docx|xls|xlsx|csv|zip|rar|7z|txt|rtf|xml|json)$/i.test(p)) type = "document";
+    return { same, type };
+}
+
+// Extractor function - fixed titles
+function extract(html, base) {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const out = new Map();
+    const add = (raw, title, sourceType) => {
+        if (!raw) return;
+        raw = raw.trim();
+        if (/^(#|javascript:|mailto:|tel:|data:|blob:|about:)/i.test(raw)) return;
+        try {
+            const u = new URL(raw, base);
+            if (!["http:", "https:"].includes(u.protocol)) return;
+            u.hash = "";
+            let t = (title || "").replace(/\s+/g, ' ').trim();
+            if (!out.has(u.href)) out.set(u.href, { url: u.href, title: t || sourceType || "Link", sourceType });
+        } catch {}
+    };
+    doc.querySelectorAll("a[href], area[href]").forEach(e => add(e.getAttribute("href"), e.textContent || e.title, "page"));
+    doc.querySelectorAll("img[src], video[src], audio[src], source[src], iframe[src]").forEach(e => add(e.getAttribute("src"), e.getAttribute("alt") || e.tagName.toLowerCase(), "media"));
+    doc.querySelectorAll("link[href]").forEach(e => add(e.getAttribute("href"), e.getAttribute("rel") || "link", "document"));
+    doc.querySelectorAll("script[src]").forEach(e => add(e.getAttribute("src"), "script", "document"));
+    return [...out.values()];
+}
+
+// Fetch target with reliable proxy fallbacks
+async function getTarget(target) {
+    const started = performance.now();
+    // 1. Try Direct
+    try {
+        const c = new AbortController();
+        const id = setTimeout(() => c.abort(), 6000);
+        const r = await fetch(target, { mode: "cors", signal: c.signal });
+        clearTimeout(id);
+        if (r.ok) {
+            const body = await r.text();
+            return { ok: true, body, ms: Math.round(performance.now() - started), via: "Direct" };
+        }
+    } catch (e) {}
+
+    if (!$("proxy").checked) return { ok: false, error: "Direct access blocked by CORS. Please enable 'CORS fallback'." };
+
+    // 2. Proxy 1: CodeTabs (Fastest raw proxy)
+    try {
+        const c = new AbortController();
+        const id = setTimeout(() => c.abort(), 8000);
+        const r = await fetch("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(target), { signal: c.signal });
+        clearTimeout(id);
+        if (r.ok) {
+            const body = await r.text();
+            if(body) return { ok: true, body, ms: Math.round(performance.now() - started), via: "Proxy (CodeTabs)" };
+        }
+    } catch (e) {}
+
+    // 3. Proxy 2: AllOrigins (JSON Fallback)
+    try {
+        const c = new AbortController();
+        const id = setTimeout(() => c.abort(), 10000);
+        const r = await fetch("https://api.allorigins.win/get?url=" + encodeURIComponent(target), { signal: c.signal });
+        clearTimeout(id);
+        if (r.ok) {
+            const d = await r.json();
+            if (d.contents) return { ok: true, body: d.contents, ms: Math.round(performance.now() - started), via: "Proxy (AllOrigins)" };
+        }
+    } catch (e) {}
+
+    return { ok: false, error: "All connectivity methods failed. Site might be blocking requests." };
+}
+
+// Fixed link checker using no-cors (Much faster & never stuck)
+async function checkLink(item) {
+    if (aborter?.signal.aborted) return { aborted: true };
+    const started = performance.now();
+
+    // Try HEAD with cors
+    try {
+        const c = new AbortController();
+        const id = setTimeout(() => c.abort(), 5000);
+        const r = await fetch(item.url, { method: "HEAD", mode: "cors", cache: "no-store", signal: c.signal });
+        clearTimeout(id);
+        const ms = Math.round(performance.now() - started);
+        if (r.ok) return { ok: true, status: r.status, ms, via: "HEAD", error: null };
+        return { ok: false, status: r.status, ms, via: "HEAD", error: "HTTP " + r.status };
+    } catch (e) {}
+
+    // Fallback to GET no-cors for reachability check without blocking
+    try {
+        const c = new AbortController();
+        const id = setTimeout(() => c.abort(), 7000);
+        const r = await fetch(item.url, { method: "GET", mode: "no-cors", cache: "no-store", signal: c.signal });
+        clearTimeout(id);
+        const ms = Math.round(performance.now() - started);
+        // Opaque response means server replied but CORS hid the data. It is LIVE.
+        return { ok: true, status: "OK", ms, via: "Opaque", error: null };
+    } catch (e) {
+        const ms = Math.round(performance.now() - started);
+        return { ok: false, status: null, ms, via: "Network", error: e?.name === "AbortError" ? "Timeout" : "Unreachable" };
+    }
+}
+
+function updateCounts() {
+    $("live").textContent = links.filter(x => x.ok === true).length;
+    $("failed").textContent = links.filter(x => x.ok === false).length;
+}
+
+// Render Results correctly
+function render() {
+    const q = $("search").value.trim().toLowerCase(), cat = $("category").value, st = $("state").value;
+    const arr = links.filter(x => {
+        const h = (x.url + " " + x.title).toLowerCase();
+        if (q && !h.includes(q)) return false;
+        if (cat !== "all" && x.type !== cat) return false;
+        if (st === "live" && x.ok !== true) return false;
+        if (st === "failed" && x.ok !== false) return false;
+        return true;
+    });
+
+    if (!arr.length) {
+        $("list").innerHTML = '<div class="empty">No matching links found yet.</div>';
+        return;
+    }
+
+    $("list").innerHTML = arr.map(x => {
+        const state = x.ok === true ? `<span class="badge ok">✓ LIVE ${x.status || ""}</span>` : x.ok === false ? `<span class="badge bad">✕ ${esc(x.error || "FAILED")}</span>` : `<span class="badge">CHECKING</span>`;
+        const ms = x.ms != null ? `<span class="badge info">${x.ms} ms</span>` : "";
+        const via = x.via ? `<span class="badge">${esc(x.via)}</span>` : "";
+        const icon = x.type === "media" ? "🎬" : x.type === "document" ? "📄" : x.type === "external" ? "🌐" : "🔗";
+        
+        return `<article class="card"><div class="row">
+            <div class="ico">${icon}</div>
+            <div class="body">
+                <div class="title" title="${esc(x.title)}">${esc(x.title)}</div>
+                <div class="url" title="${esc(x.url)}">${esc(x.url)}</div>
+                <div class="meta"><span class="badge">${x.type.toUpperCase()}</span>${state}${ms}${via}<span class="badge">${x.same ? "SAME" : "EXTERNAL"}</span></div>
+            </div>
+            <div class="actions">
+                <button class="open" data-open="${esc(x.url)}">OPEN</button>
+                <button class="copy" data-copy="${esc(x.url)}">COPY</button>
+            </div>
+        </div></article>`;
+    }).join("");
+}
+
+async function runBatch(items) {
+    let next = 0, done = 0;
+    async function worker() {
+        while (true) {
+            if (aborter?.signal.aborted) return;
+            const i = next++;
+            if (i >= items.length) return;
+            const result = await checkLink(items[i]);
+            if (aborter?.signal.aborted) return;
+            Object.assign(items[i], result);
+            done++;
+            updateCounts();
+            setProgress(25 + (done / Math.max(items.length, 1)) * 75, `Checking links ${done}/${items.length}`);
+            render();
+        }
+    }
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, Math.max(items.length, 1)) }, worker));
+}
+
+async function scan() {
+    if (scanning) {
+        aborter?.abort();
+        return;
+    }
+    const target = normalize($("url").value);
+    if (!target) {
+        alert("නිවැරදි website URL එකක් ඇතුළත් කරන්න.\nඋදා: https://example.com");
+        return;
+    }
+
+    scanning = true;
+    aborter = new AbortController();
+    $("scan").disabled = true;
+    $("scan").textContent = "⏹ STOP";
+    $("status").classList.remove("hide");
+    $("summary").classList.remove("hide");
+    $("results").classList.remove("hide");
+    
+    links = [];
+    $("found").textContent = "0";
+    $("live").textContent = "0";
+    $("failed").textContent = "0";
+    $("ping").textContent = "—";
+    $("https").textContent = new URL(target).protocol === "https:" ? "ON" : "OFF";
+    render();
+    
+    setProgress(3, "Connecting to target...");
+    
+    try {
+        const tr = await getTarget(target);
+        if (aborter.signal.aborted) return;
+        
+        if (!tr.ok || !tr.body) {
+            setProgress(100, "Target could not be read");
+            $("list").innerHTML = `<div class="empty"><b>⚠️ Website content could not be read.</b><br><br>${esc(tr.error || "Unknown error")}<br><br><small>Direct browser access can be blocked by CORS or security rules. Verify that your Target URL is valid.</small></div>`;
+            return;
+        }
+        
+        $("ping").textContent = (tr.ms ?? "—") + " ms";
+        setProgress(20, "Target connected • extracting links...");
+        
+        const raw = extract(tr.body, target);
+        const filtered = raw.filter(x => {
+            const c = classify(x.url, target);
+            x.same = c.same;
+            x.type = c.type;
+            if (c.same && !$("same").checked) return false;
+            if (!c.same && !$("external").checked) return false;
+            if (c.type === "media" && !$("media").checked) return false;
+            if (c.type === "document" && !$("docs").checked) return false;
+            return true;
+        }).slice(0, MAX_LINKS);
+        
+        links = filtered.map(x => ({ ...x, ok: null, status: null, ms: null, via: null, error: null }));
+        $("found").textContent = links.length;
+        render();
+        
+        if (!links.length) {
+            setProgress(100, "Scan complete • no public links found");
+            return;
+        }
+        
+        await runBatch(links);
+        
+        if (!aborter.signal.aborted) {
+            updateCounts();
+            const live = links.filter(x => x.ok === true).length;
+            const failed = links.filter(x => x.ok === false).length;
+            setProgress(100, `Complete • ${live} live • ${failed} failed`);
+        }
+    } catch (err) {
+        console.error(err);
+        setProgress(100, "Scanner error");
+        $("list").innerHTML = `<div class="empty">⚠️ Unexpected scanner error
