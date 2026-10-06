@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05070a">
+<meta name="description" content="CyberScan Pro - Web Link and Connectivity Analyzer">
+<title>CyberScan Pro 2026</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root{
+--bg:#05070a;--panel:#0b1016;--panel2:#101720;--line:rgba(255,255,255,.09);
+--text:#f5f7fa;--muted:#8793a1;--green:#00ffaa;--blue:#1498ff;
+--red:#ff4d70;--yellow:#ffd34d;--shadow:0 20px 60px rgba(0,0,0,.42)
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{min-height:100vh;background:
+radial-gradient(circle at 10% 5%,rgba(0,255,170,.09),transparent 28%),
+radial-gradient(circle at 90% 10%,rgba(20,152,255,.10),transparent 30%),var(--bg);
+color:var(--text);font-family:Inter,Arial,sans-serif}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{width:min(1120px,100%);margin:auto;padding:14px}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:43px;height:43px;border-radius:13px;display:grid;place-items:center;
+background:linear-gradient(135deg,var(--green),var(--blue));color:#00140e;font-size:24px;font-weight:800}
+.brand b{display:block;font-size:17px}.brand small{display:block;color:var(--muted);font-size:9px;margin-top:3px}
+.engine{font-size:9px;color:#9ba6b2}.engine i{display:inline-block;width:7px;height:7px;border-radius:50%;
+background:var(--green);box-shadow:0 0 10px var(--green);margin-right:5px}
+.hero{padding:22px;border:1px solid var(--line);border-radius:23px;background:rgba(255,255,255,.025);
+box-shadow:var(--shadow);backdrop-filter:blur(18px)}
+.tag{color:var(--green);font-size:9px;font-weight:800;letter-spacing:1.5px}
+h1{font-size:clamp(28px,5vw,48px);line-height:1.05;letter-spacing:-2px;margin:9px 0}
+h1 span{background:linear-gradient(90deg,var(--green),var(--blue));-webkit-background-clip:text;color:transparent}
+.desc{color:var(--muted);font-size:12px;line-height:1.65;max-width:750px}
+.search{display:flex;gap:9px;margin-top:19px}
+.search input{height:54px;min-width:0;flex:1;background:#05080c;border:1px solid rgba(0,255,170,.18);
+border-radius:13px;color:white;padding:0 15px;outline:none}
+.search input:focus{border-color:var(--green);box-shadow:0 0 0 4px rgba(0,255,170,.06)}
+.scan{height:54px;border:0;border-radius:13px;padding:0 25px;font-weight:800;color:#00130e;
+background:linear-gradient(135deg,var(--green),var(--blue))}
+.scan:disabled{opacity:.55;cursor:not-allowed}
+.options{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.options label{font-size:9px;color:#aeb8c3;background:#0b1016;border:1px solid var(--line);
+border-radius:9px;padding:7px 9px}.options input{accent-color:var(--green)}
+.status{margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#080d12}
+.statusLine{display:flex;justify-content:space-between;color:#aeb8c3;font-size:10px}
+.bar{height:5px;background:#17202a;border-radius:9px;overflow:hidden;margin-top:9px}.bar i{display:block;width:0;height:100%;
+background:linear-gradient(90deg,var(--green),var(--blue));transition:.2s}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:13px}
+.stat{padding:13px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.025)}
+.stat small{display:block;color:var(--muted);font-size:8px;text-transform:uppercase}.stat b{display:block;margin-top:5px;font-size:20px}
+.ok{color:var(--green)}.bad{color:var(--red)}.info{color:#6fc1ff}
+.results{margin-top:14px}.head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.head h2{font-size:16px}.head small{display:block;color:var(--muted);font-size:9px;margin-top:3px}
+.btn{background:#0b1016;color:#bdc6d0;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:9px}
+.filters{display:flex;gap:7px;margin-bottom:10px}
+.filters input,.filters select{height:40px;background:#080d12;border:1px solid var(--line);border-radius:10px;color:#dbe2e8;padding:0 10px;outline:0}
+.filters input{flex:1}.list{display:grid;gap:8px}
+.card{padding:12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}
+.row{display:flex;align-items:center;gap:10px}.ico{width:37px;height:37px;flex:0 0 37px;border-radius:10px;
+display:grid;place-items:center;background:#111923}.body{min-width:0;flex:1}
+.title{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.url{font-size:9px;color:#6e7a88;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}.badge{font-size:8px;padding:4px 6px;border-radius:6px;background:#111922;color:#9eabb8}
+.badge.ok{background:rgba(0,255,170,.07);color:#73ffca}.badge.bad{background:rgba(255,77,112,.08);color:#ff91a7}
+.badge.info{background:rgba(20,152,255,.08);color:#80c7ff}
+.actions{display:flex;gap:5px}.actions button{height:32px;padding:0 9px;border:0;border-radius:8px;font-size:8px}
+.open{background:linear-gradient(135deg,var(--green),var(--blue));font-weight:800}.copy{background:#151d26;color:#bdc7d2}
+.empty{padding:30px;text-align:center;border:1px dashed var(--line);border-radius:14px;color:#687483;font-size:11px;line-height:1.7}
+footer{text-align:center;color:#4e5a67;font-size:9px;padding:20px 0 8px}.hide{display:none!important}
+@media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}.stat:last-child{grid-column:span 2}}
+@media(max-width:520px){.app{padding:10px}.hero{padding:17px;border-radius:19px}.search{flex-direction:column}.scan{width:100%}
+.filters{flex-direction:column}.filters>*{width:100%}.actions{flex-direction:column}.actions button{padding:0 7px}.row{align-items:flex-start}}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<header class="top">
+<div class="brand">
+<div class="logo">⌁</div>
+<div><b>CyberScan Pro</b><small>GitHub Pages • Web Link Analyzer</small></div>
+</div>
+<div class="engine"><i></i> LIVE ENGINE</div>
+</header>
+
+<section class="hero">
+<div class="tag">WEB ANALYZER 2026</div>
+<h1>Find <span>reachable links</span><br>from any public page.</h1>
+<p class="desc">
+Real browser connectivity checks. No random or invented links.
+Because GitHub Pages is static, some websites may block browser requests with CORS;
+those links are marked as unverified instead of being falsely shown as live.
+</p>
+
+<form class="search" id="form">
+<input id="url" type="url" placeholder="https://example.com" autocomplete="url" required>
+<button class="scan" id="scan">⚡ SCAN</button>
+</form>
+
+<div class="options">
+<label><input id="same" type="checkbox" checked> Same domain</label>
+<label><input id="external" type="checkbox" checked> External</label>
+<label><input id="media" type="checkbox" checked> Media</label>
+<label><input id="docs" type="checkbox" checked> Documents</label>
+</div>
+
+<div class="status hide" id="status">
+<div class="statusLine"><span id="statusText">Preparing...</span><b id="pct">0%</b></div>
+<div class="bar"><i id="bar"></i></div>
+</div>
+</section>
+
+<section class="grid hide" id="summary">
+<div class="stat"><small>Target Ping</small><b class="ok" id="ping">—</b></div>
+<div class="stat"><small>Links Found</small><b id="found">0</b></div>
+<div class="stat"><small>Live</small><b class="ok" id="live">0</b></div>
+<div class="stat"><small>Failed</small><b class="bad" id="failed">0</b></div>
+<div class="stat"><small>HTTPS</small><b class="info" id="https">—</b></div>
+</section>
+
+<section class="results hide" id="results">
+<div class="head">
+<div><h2>🔎 Link Results</h2><small>Live means the browser received a response.</small></div>
+<button class="btn" id="copyLive">COPY LIVE</button>
+</div>
+
+<div class="filters">
+<input id="search" type="search" placeholder="Search URL / title...">
+<select id="category">
+<option value="all">All</option><option value="page">Pages</option>
+<option value="media">Media</option><option value="document">Documents</option>
+<option value="external">External</option>
+</select>
+<select id="state">
+<option value="all">All status</option><option value="live">Live</option>
+<option value="failed">Failed / blocked</option>
+</select>
+</div>
+<div class="list" id="list"></div>
+</section>
+
+<footer>CyberScan Pro • Static GitHub Pages edition • Use only on authorized targets.</footer>
+</div>
+
+<script>
+"use strict";
+
+const $=id=>document.getElementById(id);
+let links=[];
+let scanning=false;
+let aborter=null;
+
+function esc(v){
+return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+
+function normalize(v){
+let x=v.trim();
+if(!/^https?:\\/\\//i.test(x))x="https://"+x;
+try{
+const u=new URL(x);
+if(!["http:","https:"].includes(u.protocol))return null;
+u.hash="";
+return u.href;
+}catch{return null}
+}
+
+function setProgress(n,t){
+n=Math.max(0,Math.min(100,Math.round(n)));
+$("bar").style.width=n+"%";
+$("pct").textContent=n+"%";
+$("statusText").textContent=t;
+}
+
+function classify(u,target){
+const x=new URL(u),t=new URL(target);
+const same=x.hostname.replace(/^www\\./,"")===t.hostname.replace(/^www\\./,"");
+const p=x.pathname.toLowerCase();
+let type=same?"page":"external";
+if(/\\.(mp4|webm|ogg|mp3|wav|m4a|mov|avi|mkv|jpg|jpeg|png|gif|svg|webp)$/i.test(p))type="media";
+else if(/\\.(pdf|doc|docx|xls|xlsx|csv|zip|rar|7z|txt)$/i.test(p))type="document";
+return{same,type};
+}
+
+function extract(html,base){
+const doc=new DOMParser().parseFromString(html,"text/html");
+const out=new Map();
+const add=(raw,title,kind)=>{
+if(!raw||/^(#|javascript:|mailto:|tel:|data:|blob:)/i.test(raw))return;
+try{
+const u=new URL(raw,base);
+if(!["http:","https:"].includes(u.protocol))return;
+u.hash="";
+if(!out.has(u.href))out.set(u.href,{url:u.href,title:title||kind||"",sourceType:kind});
+}catch{}
+};
+doc.querySelectorAll("a[href],area[href]").forEach(e=>add(e.getAttribute("href"),e.textContent.trim(),"page"));
+doc.querySelectorAll("img[src],video[src],audio[src],source[src],iframe[src]").forEach(e=>add(e.getAttribute("src"),e.tagName.toLowerCase(),"media"));
+doc.querySelectorAll("link[href],script[src]").forEach(e=>add(e.getAttribute("href")||e.getAttribute("src"),e.tagName.toLowerCase(),"document"));
+return[...out.values()];
+}
+
+async function request(url,method="GET"){
+const controller=new AbortController();
+const timer=setTimeout(()=>controller.abort(),7000);
+const start=performance.now();
+try{
+const r=await fetch(url,{method,mode:"cors",cache:"no-store",redirect:"follow",signal:controller.signal});
+return{r,ms:Math.round(performance.now()-start)};
+}catch(e){
+return{r:null,ms:null,error:e.name==="AbortError"?"Timeout":"CORS / Network blocked"};
+}finally{clearTimeout(timer)}
+}
+
+function render(){
+const q=$("search").value.trim().toLowerCase(),cat=$("category").value,st=$("state").value;
+const arr=links.filter(x=>{
+const h=(x.url+" "+x.title).toLowerCase();
+if(q&&!h.includes(q))return false;
+if(cat!=="all"&&x.type!==cat)return false;
+if(st==="live"&&x.ok!==true)return false;
+if(st==="failed"&&x.ok!==false)return false;
+return true;
+});
+if(!arr.length){$("list").innerHTML='<div class="empty">No matching links found.</div>';return}
+$("list").innerHTML=arr.map(x=>{
+const state=x.ok===true
+?`<span class="badge ok">✓ LIVE ${x.status??""}</span>`
+:x.ok===false
+?`<span class="badge bad">✕ ${esc(x.error||"FAILED")}</span>`
+:`<span class="badge">CHECKING</span>`;
+const ms=x.ms!=null?`<span class="badge info">${x.ms} ms</span>`:"";
+const icon=x.type==="media"?"🎬":x.type==="document"?"📄":x.type==="external"?"🌐":"🔗";
+return `<article class="card"><div class="row"><div class="ico">${icon}</div><div class="body">
+<div class="title">${esc(x.title||x.url)}</div><div class="url">${esc(x.url)}</div>
+<div class="meta"><span class="badge">${x.type}</span>${state}${ms}<span class="badge">${x.same?"SAME":"EXTERNAL"}</span></div>
+</div><div class="actions"><button class="open" data-open="${esc(x.url)}">OPEN</button><button class="copy" data-copy="${esc(x.url)}">COPY</button></div>
+</div></article>`;
+}).join("");
+}
+
+async function scan(){
+if(scanning){aborter?.abort();return}
+const target=normalize($("url").value);
+if(!target){alert("නිවැරදි http:// හෝ https:// URL එකක් ඇතුළත් කරන්න.");return}
+scanning=true;aborter=new AbortController();$("scan").disabled=true;
+$("status").classList.remove("hide");$("summary").classList.remove("hide");$("results").classList.remove("hide");
+links=[];render();setProgress(5,"Connecting to target...");
+
+const targetCheck=await request(target,"GET");
+if(!targetCheck.r){
+setProgress(100,"Target could not be read");
+$("list").innerHTML=`<div class="empty">⚠️ ${esc(targetCheck.error)}<br><br>This is commonly caused by the target's CORS policy. No fake result is generated.</div>`;
+finish();return;
+}
+
+$("ping").textContent=targetCheck.ms+" ms";
+$("https").textContent=new URL(target).protocol==="https:"?"ON":"OFF";
+
+let text="";
+try{text=await targetCheck.r.text()}catch{}
+setProgress(25,"Reading page and extracting links...");
+
+if(!text){
+setProgress(100,"No readable HTML content");
+finish();return;
+}
+
+const raw=extract(text,target);
+const filtered=raw.filter(x=>{
+const c=classify(x.url,target);
+x.same=c.same;x.type=c.type;
+if(c.same&&!$("same").checked)return false;
+if(!c.same&&!$("external").checked)return false;
+if(c.type==="media"&&!$("media").checked)return false;
+if(c.type==="document"&&!$("docs").checked)return false;
+return true;
+}).slice(0,80);
+
+links=filtered.map(x=>({...x,ok:null,status:null,ms:null,error:null}));
+render();
+$("found").textContent=links.length;
+
+for(let i=0;i<links.length;i++){
+if(aborter.signal.aborted)break;
+const item=links[i];
+const result=await request(item.url,"GET");
+if(aborter.signal.aborted)break;
+item.ok=!!result.r;
+item.ms=result.ms;
+item.error=result.error||null;
+item.status=result.r?result.r.status:null;
+const n=i+1;
+$("live").textContent=links.filter(x=>x.ok===true).length;
+$("failed").textContent=links.filter(x=>x.ok===false).length;
+setProgress(25+(n/links.length)*75,`Checking links ${n}/${links.length}`);
+render();
+}
+
+setProgress(100,aborter.signal.aborted?"Scan stopped":`Complete • ${links.filter(x=>x.ok===true).length} live`);
+finish();
+}
+
+function finish(){
+scanning=false;$("scan").disabled=false;aborter=null;
+}
+
+$("form").addEventListener("submit",e=>{e.preventDefault();scan()});
+[$("search"),$("category"),$("state")].forEach(x=>{x.addEventListener("input",render);x.addEventListener("change",render)});
+
+$("list").addEventListener("click",async e=>{
+const o=e.target.closest("[data-open]"),c=e.target.closest("[data-copy]");
+if(o)window.open(o.dataset.open,"_blank","noopener,noreferrer");
+if(c){
+try{
+await navigator.clipboard.writeText(c.dataset.copy);
+c.textContent="COPIED";setTimeout(()=>c.textContent="COPY",900);
+}catch{alert("Copy failed")}
+}
+});
+
+$("copyLive").addEventListener("click",async()=>{
+const urls=links.filter(x=>x.ok===true).map(x=>x.url);
+if(!urls.length){alert("Live links නැහැ.");return}
+try{
+await navigator.clipboard.writeText(urls.join("\\n"));
+$("copyLive").textContent="COPIED";
+setTimeout(()=>$("copyLive").textContent="COPY LIVE",1000);
+}catch{alert("Copy failed")}
+});
+</script>
+</body>
+</html>
