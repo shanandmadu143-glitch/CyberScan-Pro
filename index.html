@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GitHub File Manager Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+:root{--bg:#0b0f14;--panel:#111821;--panel2:#17202b;--line:#263241;--text:#f5f7fa;--muted:#9aa8b8;--accent:#2f81f7;--danger:#f85149;--ok:#3fb950;--radius:18px}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#0b0f14,#0e141c);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+button,input,textarea,select{font:inherit}button{border:0;cursor:pointer}.app{max-width:1200px;margin:auto;min-height:100vh;padding-bottom:84px}
+header{position:sticky;top:0;z-index:20;background:rgba(11,15,20,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--line);padding:14px 16px}
+.top{display:flex;gap:12px;align-items:center}.logo{font-size:21px;font-weight:800}.status{margin-left:auto;color:var(--muted);font-size:12px}
+main{padding:16px}.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{display:flex;flex-direction:column;gap:7px}.field label{color:var(--muted);font-size:12px}
+input,textarea,select{width:100%;background:#0d131b;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px;outline:none}textarea{min-height:280px;resize:vertical}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.btn{padding:10px 14px;border-radius:12px;background:var(--panel2);color:var(--text);border:1px solid var(--line)}.primary{background:var(--accent);border-color:var(--accent);color:white}.danger{background:rgba(248,81,73,.12);border-color:rgba(248,81,73,.4);color:#ff7b72}.success{background:rgba(63,185,80,.12);border-color:rgba(63,185,80,.4);color:#56d364}
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:12px}.toolbar input{flex:1}
+.repo,.item{display:flex;align-items:center;gap:11px;padding:13px;border:1px solid var(--line);background:#0f151d;border-radius:14px;margin-top:8px}.repo:hover,.item:hover{border-color:#405064}
+.repo-main,.item-main{min-width:0;flex:1}.name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.meta{font-size:12px;color:var(--muted);margin-top:3px}
+.icon{width:38px;height:38px;border-radius:11px;background:#192432;display:grid;place-items:center;flex:none}.check{width:19px;height:19px;accent-color:var(--accent)}
+.empty{text-align:center;color:var(--muted);padding:35px 10px}.hidden{display:none!important}
+.bottom{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(11,15,20,.96);border-top:1px solid var(--line);display:flex;justify-content:center;gap:6px;padding:9px env(safe-area-inset-right) calc(9px + env(safe-area-inset-bottom)) env(safe-area-inset-left)}
+.bottom button{background:none;color:var(--muted);padding:7px 15px;border-radius:12px}.bottom button.active{background:#172335;color:white}
+.progress{height:8px;background:#0a0f15;border-radius:99px;overflow:hidden}.bar{height:100%;width:0;background:var(--accent);transition:width .2s}
+.toast{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);z-index:50;background:#1b2633;border:1px solid var(--line);padding:12px 16px;border-radius:13px;max-width:min(92vw,600px);box-shadow:0 10px 35px #0008}
+.modal{position:fixed;inset:0;z-index:40;background:#0009;display:grid;place-items:center;padding:15px}.modalbox{width:min(720px,100%);max-height:92vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:17px}
+@media(max-width:650px){main{padding:10px}.grid{grid-template-columns:1fr}.card{padding:13px}.status{display:none}.actions .btn{flex:1}.toolbar{flex-wrap:wrap}.toolbar input{flex-basis:100%}}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div class="top"><div class="logo">◈ GitHub File Manager</div><div id="status" class="status">Disconnected</div></div></header>
+<main>
+<section id="connectView">
+<div class="card"><h2>GitHub Connection</h2><p class="meta">Use a Fine-grained PAT with the required repository permissions.</p>
+<div class="field"><label>Personal Access Token</label><input id="token" type="password" autocomplete="off" placeholder="github_pat_..."></div>
+<div class="actions"><button class="btn primary" id="connectBtn">Connect</button><button class="btn" id="clearBtn">Clear</button></div></div>
+</section>
+
+<section id="dashboardView" class="hidden">
+<div class="card"><div class="toolbar"><div><b id="userName">GitHub</b><div id="userLogin" class="meta"></div></div><button class="btn" id="refreshRepos">Refresh</button></div>
+<div class="actions"><button class="btn primary" id="newRepoBtn">＋ New Repository</button><button class="btn danger" id="disconnectBtn">Disconnect</button></div></div>
+<div class="card"><div class="toolbar"><input id="repoSearch" placeholder="Search repositories..."></div><div id="repoList"></div></div>
+</section>
+
+<section id="repoView" class="hidden">
+<div class="card"><div class="toolbar"><button class="btn" id="backRepos">←</button><div class="repo-main"><b id="repoTitle">Repository</b><div id="repoMeta" class="meta"></div></div><button class="btn" id="refreshFiles">↻</button></div>
+<div class="grid"><div class="field"><label>Branch</label><select id="branchSelect"></select></div><div class="field"><label>Current path</label><input id="currentPath" readonly></div></div>
+<div class="actions"><button class="btn primary" id="uploadBtn">＋ Files</button><button class="btn primary" id="zipBtn">📦 ZIP</button><button class="btn danger" id="deleteSelected">Delete selected</button></div>
+<input id="fileInput" type="file" multiple class="hidden"><input id="zipInput" type="file" accept=".zip,application/zip" class="hidden">
+<div id="uploadProgress" class="hidden" style="margin-top:12px"><div class="progress"><div id="progressBar" class="bar"></div></div><div id="progressText" class="meta" style="margin-top:6px"></div></div>
+</div>
+<div class="card"><div class="toolbar"><button class="btn" id="upBtn">↑ Up</button><button class="btn" id="selectAllBtn">Select all</button><input id="fileSearch" placeholder="Search files..."></div><div id="fileList"></div></div>
+</section>
+</main>
+<nav class="bottom"><button id="navHome" class="active">⌂ Home</button><button id="navRepo">▣ Repositories</button><button id="navConnect">⚙ Connection</button></nav>
+</div>
+
+<div id="modal" class="modal hidden"><div class="modalbox"><div id="modalContent"></div></div></div>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+'use strict';
+const API='https://api.github.com';
+const $=id=>document.getElementById(id);
+const state={token:'',user:null,repos:[],repo:null,branch:'',path:'',items:[],selected:new Set()};
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function toast(m){$('toast').textContent=m;$('toast').classList.remove('hidden');clearTimeout(toast.t);toast.t=setTimeout(()=>$('toast').classList.add('hidden'),3500)}
+function show(view){['connectView','dashboardView','repoView'].forEach(x=>$(x).classList.toggle('hidden',x!==view));$('navHome').classList.toggle('active',view==='dashboardView');$('navRepo').classList.toggle('active',view==='repoView');$('navConnect').classList.toggle('active',view==='connectView')}
+function headers(json=false){return {'Accept':'application/vnd.github+json','Authorization':'Bearer '+state.token,'X-GitHub-Api-Version':'2026-03-10',...(json?{'Content-Type':'application/json'}:{})}}
+async function api(url,opt={}){const r=await fetch(API+url,{...opt,headers:{...headers(!!opt.body),...(opt.headers||{})}});let data=null;try{data=await r.json()}catch{}if(!r.ok){const msg=data?.message||r.statusText||('HTTP '+r.status);throw new Error(r.status+' '+msg)}return data}
+function pathUrl(owner,repo,path){return `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${path.split('/').filter(Boolean).map(encodeURIComponent).join('/')}`}
+function b64(bytes){let s='';const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)s+=String.fromCharCode(...bytes.subarray(i,i+chunk));return btoa(s)}
+async function getFile(owner,repo,path,branch){try{return await api(pathUrl(owner,repo,path)+'?ref='+encodeURIComponent(branch))}catch(e){if(e.message.startsWith('404 '))return null;throw e}}
+async function putFile(path,bytes,message){const existing=await getFile(state.user.login,state.repo.name,path,state.branch);const body={message,content:b64(bytes),branch:state.branch};if(existing?.sha)body.sha=existing.sha;await api(pathUrl(state.user.login,state.repo.name,path),{method:'PUT',body:JSON.stringify(body)})}
+async function deleteFile(path){const existing=await getFile(state.user.login,state.repo.name,path,state.branch);if(!existing?.sha)throw new Error('File not found: '+path);await api(pathUrl(state.user.login,state.repo.name,path),{method:'DELETE',body:JSON.stringify({message:'Delete '+path,sha:existing.sha,branch:state.branch})})}
+async function connect(){const t=$('token').value.trim();if(!t)return toast('Enter your GitHub token');state.token=t;try{const u=await api('/user');state.user=u;state.repos=await api('/user/repos?per_page=100&sort=updated');$('userName').textContent=u.name||u.login;$('userLogin').textContent='@'+u.login;$('status').textContent='Connected as @'+u.login;show('dashboardView');renderRepos()}catch(e){state.token='';toast('Connection failed: '+e.message)}}
+function renderRepos(){const q=$('repoSearch').value.toLowerCase();const rs=state.repos.filter(r=>r.full_name.toLowerCase().includes(q)||r.name.toLowerCase().includes(q));$('repoList').innerHTML=rs.length?rs.map(r=>`<div class="repo"><div class="icon">▣</div><div class="repo-main"><div class="name">${esc(r.name)}</div><div class="meta">${r.private?'Private':'Public'} · ${esc(r.default_branch||'main')}</div></div><button class="btn" data-open="${esc(r.name)}">Open</button></div>`).join(''):'<div class="empty">No repositories found</div>';document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openRepo(b.dataset.open))}
+async function openRepo(name){const r=state.repos.find(x=>x.name===name);if(!r)return;state.repo=r;state.path='';state.selected.clear();$('repoTitle').textContent=r.name;$('repoMeta').textContent=r.private?'Private repository':'Public repository';try{const branches=await api(`/repos/${encodeURIComponent(state.user.login)}/${encodeURIComponent(r.name)}/branches?per_page=100`);$('branchSelect').innerHTML=branches.map(b=>`<option value="${esc(b.name)}">${esc(b.name)}</option>`).join('');state.branch=r.default_branch||branches[0]?.name||'main';$('branchSelect').value=state.branch;show('repoView');await loadFiles()}catch(e){toast('Repository open failed: '+e.message)}}
+async function loadFiles(){if(!state.repo)return;state.selected.clear();$('currentPath').value=state.path||'/';try{const u=pathUrl(state.user.login,state.repo.name,state.path||'')+'?ref='+encodeURIComponent(state.branch);const data=await api(u);state.items=Array.isArray(data)?data:[data];renderFiles()}catch(e){if(e.message.startsWith('404 ')){state.items=[];renderFiles();toast('Folder is empty or not found')}else toast('Load failed: '+e.message)}}
+function renderFiles(){const q=$('fileSearch').value.toLowerCase();const list=state.items.filter(x=>x.name.toLowerCase().includes(q));$('fileList').innerHTML=list.length?list.map(x=>`<div class="item"><input class="check" type="checkbox" data-path="${esc(x.path)}" ${state.selected.has(x.path)?'checked':''}><div class="icon">${x.type==='dir'?'📁':'📄'}</div><div class="item-main"><div class="name">${esc(x.name)}</div><div class="meta">${esc(x.type)} · ${x.size||0} bytes</div></div>${x.type==='dir'?`<button class="btn" data-dir="${esc(x.path)}">Open</button>`:`<button class="btn" data-edit="${esc(x.path)}">Edit</button>`}</div>`).join(''):'<div class="empty">No files</div>';document.querySelectorAll('.check').forEach(c=>c.onchange=()=>c.checked?state.selected.add(c.dataset.path):state.selected.delete(c.dataset.path));document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.path=b.dataset.dir;loadFiles()});document.querySelectorAll('[data-edit]').forEach(b=>editFile(b.dataset.edit))}
+async function editFile(path){try{const d=await getFile(state.user.login,state.repo.name,path,state.branch);if(!d?.content)return toast('This file cannot be edited as text');let text=atob(d.content.replace(/\n/g,''));try{text=decodeURIComponent(escape(text))}catch{}openModal(`<h3>Edit ${esc(path)}</h3><textarea id="editText">${esc(text)}</textarea><div class="actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" id="saveEdit">Save</button></div>`);$('saveEdit').onclick=async()=>{try{await putFile(path,new TextEncoder().encode($('editText').value),'Update '+path);toast('Saved');closeModal();loadFiles()}catch(e){toast('Save failed: '+e.message)}}}catch(e){toast('Edit failed: '+e.message)}}
+async function uploadFiles(files,zip=false){if(!files.length)return;const arr=[];if(zip){if(!window.JSZip)return toast('ZIP library failed to load');try{const z=await JSZip.loadAsync(files[0]);for(const [p,o] of Object.entries(z.files)){if(o.dir)continue;const clean=p.replace(/^\/+/,'').split('/').filter(x=>x&&x!=='.'&&x!=='..').join('/');if(clean)arr.push({path:(state.path?state.path+'/':'')+clean,bytes:await o.async('uint8array')})}}catch(e){return toast('ZIP extract failed: '+e.message)}}else for(const f of files)arr.push({path:(state.path?state.path+'/':'')+f.name,bytes:new Uint8Array(await f.arrayBuffer())});if(!arr.length)return toast('ZIP contains no files');$('uploadProgress').classList.remove('hidden');let done=0;for(const x of arr){try{await putFile(x.path,x.bytes,'Upload '+x.path);done++;$('progressBar').style.width=(done/arr.length*100)+'%';$('progressText').textContent=`${done}/${arr.length}: ${x.path}`}catch(e){toast(`Stopped after ${done} file(s): ${e.message}`);break}}if(done===arr.length)toast(`Uploaded ${done} file(s) successfully`);setTimeout(()=>{$('uploadProgress').classList.add('hidden');$('progressBar').style.width='0';loadFiles()},700)}
+async function deleteSelected(){const files=[...state.selected].filter(p=>{const x=state.items.find(i=>i.path===p);return x?.type==='file'});if(!files.length)return toast('Select one or more files first');if(!confirm(`Delete ${files.length} selected file(s)?`))return;let ok=0;for(const p of files){try{await deleteFile(p);ok++}catch(e){toast(`Deleted ${ok}/${files.length}. Failed: ${p} — ${e.message}`);break}}toast(`Deleted ${ok}/${files.length} file(s)`);await loadFiles()}
+function openModal(c){$('modalContent').innerHTML=c;$('modal').classList.remove('hidden')}function closeModal(){$('modal').classList.add('hidden')}
+async function newRepo(){openModal(`<h3>New Repository</h3><div class="field"><label>Name</label><input id="rn" placeholder="my-project"></div><div class="field"><label>Description</label><input id="rd" placeholder="Optional"></div><div class="field"><label>Visibility</label><select id="rv"><option value="false">Public</option><option value="true">Private</option></select></div><div class="actions"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" id="createRepo">Create</button></div>`);$('createRepo').onclick=async()=>{const name=$('rn').value.trim();if(!name)return toast('Repository name required');try{await api('/user/repos',{method:'POST',body:JSON.stringify({name,description:$('rd').value.trim(),private:$('rv').value==='true',auto_init:true})});closeModal();await refreshRepos();toast('Repository created')}catch(e){toast('Create failed: '+e.message)}}}
+async function refreshRepos(){state.repos=await api('/user/repos?per_page=100&sort=updated');renderRepos()}
+$('connectBtn').onclick=connect;$('clearBtn').onclick=()=>{$('token').value='';state.token=''};$('refreshRepos').onclick=()=>refreshRepos().catch(e=>toast(e.message));$('repoSearch').oninput=renderRepos;$('newRepoBtn').onclick=newRepo;$('disconnectBtn').onclick=()=>{state.token='';state.user=null;show('connectView');$('status').textContent='Disconnected'};$('backRepos').onclick=()=>show('dashboardView');$('refreshFiles').onclick=loadFiles;$('branchSelect').onchange=()=>{state.branch=$('branchSelect').value;state.path='';loadFiles()};$('uploadBtn').onclick=()=>$('fileInput').click();$('zipBtn').onclick=()=>$('zipInput').click();$('fileInput').onchange=e=>uploadFiles([...e.target.files]);$('zipInput').onchange=e=>uploadFiles([...e.target.files],true);$('deleteSelected').onclick=deleteSelected;$('fileSearch').oninput=renderFiles;$('upBtn').onclick=()=>{if(!state.path)return;state.path=state.path.split('/').slice(0,-1).join('/');loadFiles()};$('selectAllBtn').onclick=()=>{state.items.filter(x=>x.type==='file').forEach(x=>state.selected.add(x.path));renderFiles()};$('navHome').onclick=()=>state.user?show('dashboardView'):show('connectView');$('navRepo').onclick=()=>state.user?show('repoView'):toast('Connect first');$('navConnect').onclick=()=>show('connectView');
+</script>
+</body>
+</html>
